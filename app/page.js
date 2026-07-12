@@ -28,6 +28,14 @@ export default function Home() {
                 <p>Passed: {result.passed ? "Yes" : "No"}</p>
                 <p>Status Code: {result.statusCode}</p>
                 <p>Missing Fields: {result.missingFields?.length ?? 0}</p>
+                <p>Type Errors: {result.typeErrors?.length ?? 0}</p>
+                {result.typeErrors?.length > 0 && (
+                  <ul>
+                    {result.typeErrors.map((err, i) => (
+                      <li key={i}>{err}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))
           : "No results yet."}

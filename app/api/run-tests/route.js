@@ -1,11 +1,29 @@
 import { endpoints } from "@/lib/endpoints";
 
+async function getAuthToken() {
+  const res = await fetch(process.env.AUTH_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      identifier: process.env.AUTH_IDENTIFIER,
+      password: process.env.AUTH_PASSWORD,
+    }),
+  });
+  const data = await res.json();
+  return data.jwt;
+}
+
 export async function POST() {
+  const token = await getAuthToken();
+
   const results = await Promise.all(
     endpoints.map(async (endpoint) => {
       try {
         const res = await fetch(endpoint.url, {
           signal: AbortSignal.timeout(5000),
+          headers: endpoint.requiresAuth
+            ? { Authorization: `Bearer ${token}` }
+            : {},
         });
         const data = await res.json();
 
@@ -15,13 +33,21 @@ export async function POST() {
           (field) => !(field in firstItem),
         );
         const fieldsPassed = missingFields.length === 0;
+        const typeErrors = Object.entries(endpoint.expectedTypes || {})
+          .filter(([field, type]) => typeof firstItem[field] !== type)
+          .map(
+            ([field, type]) =>
+              `${field} should be ${type} but got ${typeof firstItem[field]}`,
+          );
+        const typesPassed = typeErrors.length === 0;
 
         return {
           name: endpoint.name,
           url: endpoint.url,
-          passed: passed && fieldsPassed,
+          passed: passed && fieldsPassed && typesPassed,
           statusCode: res.status,
           missingFields,
+          typeErrors,
         };
       } catch (err) {
         return {
@@ -33,6 +59,7 @@ export async function POST() {
       }
     }),
   );
+
   const report = {
     id: Date.now(),
     runAt: new Date().toISOString(),
