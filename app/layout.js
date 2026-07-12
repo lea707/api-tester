@@ -12,11 +12,11 @@ export default function RootLayout({ children }) {
         <nav>
           <ul>
             <li>
-              <a href="/">home</a>
+              <a href="/">Home</a>
             </li>
           </ul>
         </nav>
-        {children}
+        <main>{children}</main>
       </body>
     </html>
   );

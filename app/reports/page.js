@@ -7,17 +7,19 @@ export default async function Reports() {
   const reports = json.data;
 
   return (
-    <div>
+    <div className="page">
       <h1>API Test Reports</h1>
       {reports.length === 0 && <p>No reports yet.</p>}
       {reports.map((report) => (
-        <div key={report.id}>
+        <div key={report.id} className="card">
           <h2>{new Date(report.runAt).toLocaleString()}</h2>
           <p>Status: {report.passed ? "All Passed" : "Some Failed"}</p>
           <p>Summary: {report.summary}</p>
-          <Link href={`/reports/${report.documentId}`}>
-            <button>View Detailed Results</button>
-          </Link>
+          <div className="actions">
+            <Link href={`/reports/${report.documentId}`}>
+              <button>View Detailed Results</button>
+            </Link>
+          </div>
         </div>
       ))}
     </div>

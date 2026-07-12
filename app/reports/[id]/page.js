@@ -8,12 +8,12 @@ export default async function Report({ params }) {
   const report = json.data;
 
   return (
-    <div>
+    <div className="page">
       <h1>API Test Result</h1>
       {!report && <p>No report found.</p>}
       {report &&
         report.results.map((result, index) => (
-          <div key={index}>
+          <div key={index} className="card">
             <h3>{result.name}</h3>
             <p>URL: {result.url}</p>
             <p>Passed: {result.passed ? "Yes" : "No"}</p>
@@ -21,9 +21,11 @@ export default async function Report({ params }) {
             {result.error && <p>Error: {result.error}</p>}
           </div>
         ))}
-      <Link href="/reports">
-        <button>Back </button>
-      </Link>
+      <div className="actions">
+        <Link href="/reports">
+          <button>Back</button>
+        </Link>
+      </div>
     </div>
   );
 }
