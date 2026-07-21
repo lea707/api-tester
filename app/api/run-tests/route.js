@@ -1,16 +1,30 @@
 import { endpoints } from "@/lib/endpoints";
-
+// TODO: Non-JSON response validation
+// Currently non-JSON responses (HTML, XML, text) are detected and reported
+// but content is not validated. When non-JSON endpoints are added,
+// implement expectedContent validation with format-specific parsers.
 async function getAuthToken() {
-  const res = await fetch(process.env.AUTH_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      identifier: process.env.AUTH_IDENTIFIER,
-      password: process.env.AUTH_PASSWORD,
-    }),
-  });
-  const data = await res.json();
-  return data.jwt;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 35000);
+
+  try {
+    const res = await fetch(process.env.AUTH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        identifier: process.env.AUTH_IDENTIFIER,
+        password: process.env.AUTH_PASSWORD,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    const data = await res.json();
+    console.log("Token received:", data.jwt ? "yes" : "no");
+    return data.jwt;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
 }
 
 async function parseResponse(res) {
@@ -58,7 +72,6 @@ async function fetchWithRetry(url, options, retries = 2) {
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetch(url, options);
-
       return res;
     } catch (err) {
       if (i === retries - 1) throw err;
@@ -81,7 +94,7 @@ async function runInBatches(items, batchSize, fn) {
 export async function POST(request) {
   const body = await request.json().catch(() => ({}));
   const selectedGroup = body.group || null;
-  const token = null;
+  const token = await getAuthToken();
 
   const filteredEndpoints = selectedGroup
     ? endpoints.filter((e) => e.group === selectedGroup)
@@ -95,10 +108,12 @@ export async function POST(request) {
         signal: AbortSignal.timeout(35000),
         headers: {
           "Cache-Control": "no-cache",
+          "Content-Type": "application/json",
           ...(endpoint.requiresAuth
             ? { Authorization: `Bearer ${token}` }
             : {}),
         },
+        body: endpoint.body ? JSON.stringify(endpoint.body) : undefined,
       });
       const responseTime = Date.now() - startTime;
       console.log(`${endpoint.name}: ${responseTime}ms`);
@@ -109,15 +124,16 @@ export async function POST(request) {
         return {
           name: endpoint.name,
           url: endpoint.url,
-          passed: passed && fieldsPassed && typesPassed && contentPassed,
+          passed: res.status === endpoint.expectedStatus,
           statusCode: res.status,
           responseType: type,
           responseTime,
-          slow: responseTime > 3000, // flag if over 3 seconds
-          missingFields,
-          typeErrors,
-          emptyError,
-          nestedErrors,
+          slow: responseTime > 3000,
+          error: parseError,
+          missingFields: [],
+          typeErrors: [],
+          emptyError: null,
+          nestedErrors: [],
         };
       }
 
@@ -136,7 +152,7 @@ export async function POST(request) {
             `${field} should be ${type} but got ${typeof firstItem[field]}`,
         );
       const typesPassed = typeErrors.length === 0;
-      // check data array is not empty
+
       const emptyError =
         endpoint.expectNonEmpty &&
         Array.isArray(data.data) &&
@@ -144,7 +160,6 @@ export async function POST(request) {
           ? "Expected non-empty data array but got empty"
           : null;
 
-      // check nested fields on first item
       const firstDataItem = Array.isArray(data.data) ? data.data[0] : null;
       const nestedErrors =
         firstDataItem && endpoint.nestedFields
