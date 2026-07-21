@@ -13,10 +13,12 @@ export default async function Report({ params }) {
       {!report && <p>No report found.</p>}
       {report &&
         report.results.map((result, index) => (
-          <div key={index} className="card">
+          <div key={index} className="card report-detail-card">
             <h3>{result.name}</h3>
             <p>URL: {result.url}</p>
-            <p>Passed: {result.passed ? "Yes" : "No"}</p>
+            <p className={`status-pill ${result.passed ? "passed" : "failed"}`}>
+              {result.passed ? "Passed" : "Failed"}
+            </p>
             {result.statusCode && <p>Status Code: {result.statusCode}</p>}
             {result.error && <p>Error: {result.error}</p>}
           </div>

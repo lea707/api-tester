@@ -11,10 +11,12 @@ export default async function Reports() {
       <h1>API Test Reports</h1>
       {reports.length === 0 && <p>No reports yet.</p>}
       {reports.map((report) => (
-        <div key={report.id} className="card">
+        <div key={report.id} className="card report-card">
           <h2>{new Date(report.runAt).toLocaleString()}</h2>
-          <p>Status: {report.passed ? "All Passed" : "Some Failed"}</p>
-          <p>Summary: {report.summary}</p>
+          <p className={`report-status ${report.passed ? "passed" : "failed"}`}>
+            {report.passed ? "Passed" : "Failed"}
+          </p>
+          <p className="report-summary">Summary: {report.summary}</p>
           <div className="actions">
             <Link href={`/reports/${report.documentId}`}>
               <button>View Detailed Results</button>
