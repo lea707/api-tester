@@ -9,6 +9,8 @@ const groups = [
   "Search",
   "All Articles",
   "Author",
+  "Writer",
+  "Reader",
 ];
 
 export default function Home() {
